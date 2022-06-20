@@ -22,9 +22,11 @@ def getClosingPrice(stockNumber):
     result = []
     for item in prices:
         result.append({
-            "date" : item.date,
+            "date" : item.date.strftime("%Y/%m/%d"),
             "price" : item.price
         })
+    if len(result) == 0:
+        return jsonify({"message" : "stock number not found"}), 404
     return jsonify(result), 200
 
 @app.route('/<stockNumber>', methods = ['POST'])
@@ -85,9 +87,18 @@ def updateClosingPrice(stockNumber):
             day = int(row[0].split("/")[2])
             date = datetime.date(year, month, day)
 
-            price = float(row[1])
+            price = float(0)
+            if row[1] == "--":
+                price = 0
+            else:
+                price = float(row[1].replace(",", ""))
 
-            item = stockPrice(price = price, stockNumber = stockNumbers[0], date = date)
+            current = stockPrice.query.filter_by(price = price, stockNumber = str(row[2]), date = date).all()
+
+            if len(current):
+                continue
+
+            item = stockPrice(price = price, stockNumber = str(row[2]), date = date)
 
             db.session.add(item)
             db.session.commit()
