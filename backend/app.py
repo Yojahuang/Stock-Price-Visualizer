@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import config
 
@@ -16,14 +16,94 @@ class stockPrice(db.Model):
         self.stockNumber = stockNumber
         self.date = date
 
-class stockName(db.Model):
-    chineseName = db.Column(db.Text, nullable = False)
-    stockNumber = db.Column(db.String(10), primary_key = True)
+@app.route('/<stockNumber>', methods = ['GET'])
+def getClosingPrice(stockNumber):
+    prices = stockPrice.query.filter_by(stockNumber = stockNumber).all()
+    result = []
+    for item in prices:
+        result.append({
+            "date" : item.date,
+            "price" : item.price
+        })
+    return jsonify(result), 200
 
-    def __init__(self, chineseName, stockNumber):
-        self.chineseName = chineseName
-        self.stockNumber = stockNumber
+@app.route('/<stockNumber>', methods = ['POST'])
+def updateClosingPrice(stockNumber):
+    import time, datetime
 
-@app.route('/')
-def hello_world():
-    return "Hello, World!"
+    def getCSV(stockNumbers):
+        import subprocess,random
+
+        for stockNumber in stockNumbers:
+            for year in [2021, 2022]:
+                for month in range(1, 13, 1):
+                    if year == 2022 and month > 6:
+                        break
+                    yearStr = str(year)
+                    monthStr = str(month)
+                    if month < 10:
+                        monthStr = "0" + monthStr
+                    date = yearStr + monthStr + "01"
+
+                    url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_AVG?response=csv&date={}&stockNo={}".format(date, str(stockNumber))
+                    time.sleep(random.uniform(1, 5))
+
+                    content = subprocess.check_output(["curl", url]).decode("cp950")
+                    with open(str(stockNumber) + ":" + yearStr + ":" + monthStr + ".csv", "w", encoding="cp950") as file:
+                        file.write(content)
+
+    getCSV([stockNumber])
+
+    def mergeCSV(stockNumbers):
+        import subprocess, csv
+
+        datas = []
+        for stockNumber in stockNumbers:
+            for year in [2021, 2022]:
+                for month in range(1, 13, 1):
+                    if year == 2022 and month > 6:
+                        break
+                    yearStr = str(year)
+                    monthStr = str(month)
+                    if month < 10:
+                        monthStr = "0" + monthStr
+
+                    filename = str(stockNumber) + ":" + yearStr + ":" + monthStr + ".csv"
+                    lineCount = 0
+                    with open(filename, encoding="cp950") as file:
+                        reader = csv.reader(file)
+                        for row in reader:
+                            lineCount = lineCount + 1
+                            if len(row) != 3 or (row[0] < '0' or row[0] > '9'):
+                                continue
+                            row[2] = stockNumber
+                            datas.append(row)
+
+        for row in datas:
+            year = int(row[0].split("/")[0]) + 1911
+            month = int(row[0].split("/")[1])
+            day = int(row[0].split("/")[2])
+            date = datetime.date(year, month, day)
+
+            price = float(row[1])
+
+            item = stockPrice(price = price, stockNumber = stockNumbers[0], date = date)
+
+            db.session.add(item)
+            db.session.commit()
+
+        for stockNumber in stockNumbers:
+            for year in [2021, 2022]:
+                for month in range(1, 13, 1):
+                    if year == 2022 and month > 6:
+                        break
+                    yearStr = str(year)
+                    monthStr = str(month)
+                    if month < 10:
+                        monthStr = "0" + monthStr
+
+                    filename = str(stockNumber) + ":" + yearStr + ":" + monthStr + ".csv"
+                    subprocess.Popen(["rm", filename])
+
+    mergeCSV([stockNumber])
+    return jsonify("Data added!"), 200
