@@ -1,8 +1,9 @@
 <template>
-  <div id="nav">
-    <router-link to="/">Home</router-link>
-  </div>
-  <router-view/>
+    <!--
+    <a class="text-center mx-auto" href="/">Home</a>
+    -->
+    <div class="mb-10"></div>
+    <router-view/>
 </template>
 
 <style>
