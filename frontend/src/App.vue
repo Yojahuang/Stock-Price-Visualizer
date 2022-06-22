@@ -1,6 +1,6 @@
 <template>
     <div class="px-2 py-1">
-        <a class="text-center text-white mx-auto" href="/">Stock closing price visualizer</a>
+        <a class="text-center mx-auto" href="/">Stock closing price visualizer</a>
     </div>
     <router-view/>
 </template>
