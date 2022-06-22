@@ -1,10 +1,14 @@
 <template>
-    <!--
-    <a class="text-center mx-auto" href="/">Home</a>
-    -->
-    <div class="mb-10"></div>
+    <div class="px-2 py-1">
+        <a class="text-center text-white mx-auto" href="/">Stock closing price visualizer</a>
+    </div>
     <router-view/>
 </template>
 
 <style>
+    a {
+        font-size: 25px;
+        font-family: monospace, Consolas, sans-serif;
+        font-weight: bold;
+    }
 </style>
